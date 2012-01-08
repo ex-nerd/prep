@@ -12,8 +12,8 @@ import subprocess
 import ConfigParser
 import argparse
 
-_conf_file = '.prep'
-_conf_sections = ['prep', 'pre', 'post', 'files', 'vars']
+_conf_file = 'prep.cfg'
+_conf_sections = ['pre', 'post', 'files', 'vars']
 
 def prep():
     parser = argparse.ArgumentParser()
@@ -55,8 +55,7 @@ def _do_prep(dirpath, conf):
     os.chdir(dirpath)
     # Process the pre-prep tasks
     _do_pre_post('pre', conf['pre'])
-    # Process variables
-    vars = dict(conf['vars'])
+    return
     # Process includes
     #inc = {}
     #for pair in conf['includes']:
@@ -71,8 +70,6 @@ def _do_prep(dirpath, conf):
 def _do_pre_post(which, items):
     """
     Currently only supports the "run" command.
-    @todo Standardize sequential commands like run.2
-    @todo natural sort sequential commands (i.e. run.2 < run.10)
     @todo more macros: chmod, mkdir, create-file, ???
     """
     for item in items:
