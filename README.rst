@@ -109,7 +109,7 @@ Positive and negative matching against mode or host::
 
     ##if:host!=www##
     This content will only exist in the final file
-    if prep was invoked on a host named www
+    if prep was invoked on a host not named www
     ##endif##
 
     This other content will always be in the final file.
