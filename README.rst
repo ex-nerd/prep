@@ -66,8 +66,10 @@ files
 pre
   - Items in this section are processed before prep touches any files
   - Currently supports the following commands:
+
     - run (or run.name1, run.name2, ...)
     - set.NAME (runs a shell command and sets var NAME to its output)
+
   - Values that look like python repr() data for basic structures will be
     interpreted as such (e.g. ``['item1','item2']`` will be interpreted as a
     list object).
