@@ -1,3 +1,5 @@
 *.pyc
 *.egg-info
 dist
+sample/conf
+sample/other.cfg
