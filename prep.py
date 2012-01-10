@@ -5,7 +5,7 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 import os, re, sys, time, socket
 import subprocess
@@ -142,7 +142,7 @@ def _smart_merge(thelist, new):
     return thelist
 
 def _load_conf(dirpath, args):
-    parser = ConfigParser.SafeConfigParser(allow_no_value=False)
+    parser = ConfigParser.SafeConfigParser()
     parser.read(os.path.join(dirpath, _conf_file))
     conf = {}
     for key in _conf_sections:
