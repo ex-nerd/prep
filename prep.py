@@ -5,7 +5,7 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 import os, re, sys, time, socket
 import subprocess
