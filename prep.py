@@ -156,7 +156,7 @@ def _load_conf(dirpath, args):
                             conf[key] = _smart_merge(conf[key], parser.items(section))
                             #print "ADD SECTION "+section
                             #print parser.items(section)
-                if type == 'user':
+                elif type == 'user':
                     if value.lower() == os.environ['USER'].lower():
                         conf[key] = _smart_merge(conf[key], parser.items(section))
                         #print "ADD SECTION "+section
