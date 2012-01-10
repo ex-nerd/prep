@@ -69,6 +69,8 @@ pre
   - Values that look like python repr() data for basic structures will be
     interpreted as such (e.g. ``['item1','item2']`` will be interpreted as a
     list object).
+  - Template interpolation *is* allowed in these options, so you can do things
+    like use a command to send the prep time and mode to a log program.
 
 post
   - Identical to **pre** above, but runs after file processing

@@ -61,7 +61,7 @@ def _do_prep(dirpath, conf):
     else:
         raise ValueError('Missing or unknown template type specified in {0} or via --template=TEMPLATE'.format(_conf_file))
     # Process the pre-prep tasks
-    _do_pre_post('pre', conf['pre'])
+    _do_pre_post('pre', conf['pre'], template)
     # Process files
     for pair in conf['files']:
         (src, dest) = pair
@@ -69,7 +69,7 @@ def _do_prep(dirpath, conf):
             raise ValueError('No such file:  {0}'.format(src))
         print "{0} -> {1}".format(src, dest)
         # Render
-        data = template.render(src)
+        data = template.render_file(src)
         # Create target directory path?
         newdir = os.path.dirname(dest)
         if newdir and not os.path.isdir(newdir):
@@ -77,29 +77,30 @@ def _do_prep(dirpath, conf):
         # Write out the rendered file
         open(dest, 'w').write(data)
     # Process the post-prep tasks
-    _do_pre_post('post', conf['post'])
+    _do_pre_post('post', conf['post'], template)
 
-def _do_pre_post(which, items):
+def _do_pre_post(which, items, template=None):
     """
-    Currently only supports the "run" command.
+    Currently only supports the "run" command family.
     @todo more macros: chmod, mkdir, create-file, ???
     """
     for item in items:
         (k, v) = item
         if k == 'run' or k.startswith('run.'):
-            _run_commands(v)
+            _run_commands(v, template)
         else:
             raise ValueError('Unrecognized "{0}" command "{1}"'.format(which, k))
 
-def _run_commands(commands):
+def _run_commands(commands, template=None):
     """Run one or more shell commands"""
     if isinstance(commands, str):
         commands = [commands]
     for task in commands:
         if isinstance(task, str):
-            subprocess.call([task])
-        else:
-            subprocess.call(task)
+            task = [task]
+        if template:
+            task = map(lambda x: template.render(x), task)
+        subprocess.call(task)
 
 def _smart_merge(thelist, new):
     """
@@ -202,17 +203,23 @@ class Template(object):
             self.vars = vars
         else:
             self.vars = dict(vars)
+    def render_file(self, file, stack=None):
+        raise NotImplementedError('Override this method in template child classes.')
+    def render(self, data, file=None, stack=None):
+        raise NotImplementedError('Override this method in template child classes.')
 
 class SimpleTemplate(Template):
     # Compile some re patterns
     re_inc = re.compile(r'##inc:([^#]+)##')
     re_if  = re.compile(r'##if:(\S+)## *\n?(.+?) *##endif## *\n?', re.S)
     re_var = re.compile(r'##([\w\.\-]+)##')
-    # Only the render method here
-    def render(self, file, stack=None):
+    # Implement the two requisite methods
+    def render_file(self, file, stack=None):
+        data = open(file, 'r').read()
+        return self.render(data, file, stack)
+    def render(self, data, file=None, stack=None):
         if not isinstance(stack, list):
             stack = []
-        filebase = os.path.dirname(file)
         # Define the replacement functions the closure way, so we have "self"
         # Note:  Don't be overzealous trapping exceptions here.  We want these
         #        to raise exceptions if there are missing var definitions, etc.
@@ -225,13 +232,13 @@ class SimpleTemplate(Template):
                     raise ValueError('Recusion loop including {0}'.format(incfile))
                 # Check first for the include file relative to the one we are
                 # currently rendering
-                if os.path.exists(os.path.join(filebase, incfile)):
-                    incpath = os.path.join(filebase, incfile)
+                if file and os.path.exists(os.path.join(os.path.dirname(file), incfile)):
+                    incpath = os.path.join(os.path.dirname(file), incfile)
                 # If that fails, just assume it's relative to the current conf file
                 else:
                     incpath = incfile
                 # Render the include
-                self._cache[incfile] = self.render(incpath, stack + [incfile])
+                self._cache[incfile] = self.render_file(incpath, stack = stack + [incfile])
             return self._cache[incfile]
         def repl_if(m):
             if '!=' in m.group(1):
@@ -251,8 +258,6 @@ class SimpleTemplate(Template):
             return ''
         def repl_var(m):
             return self.vars[m.group(1)]
-        # Load the file
-        data = open(file, 'r').read()
         # Process basic logic
         while True:
             (data, n) = re.subn(self.re_if, repl_if, data)
