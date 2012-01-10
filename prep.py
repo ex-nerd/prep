@@ -5,7 +5,7 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 import os, re, sys, time, socket
 import subprocess
@@ -142,12 +142,12 @@ def _load_conf(dirpath, args):
                 #print section[len(key)+1:]
                 (type,value) = section[len(key)+1:].split('=', 2)
                 if type == 'mode':
-                    if value == args.mode:
+                    if value.lower() == args.mode.lower():
                         conf[key] = _smart_merge(conf[key], parser.items(section))
                         #print "ADD SECTION "+section
                         #print parser.items(section)
                 elif type =='host':
-                    if args.host == value or args.host.startswith(value + '.'):
+                    if args.host.lower() == value.lower() or args.host.lower().startswith(value.lower() + '.'):
                         conf[key] = _smart_merge(conf[key], parser.items(section))
                         #print "ADD SECTION "+section
                         #print parser.items(section)
@@ -156,6 +156,11 @@ def _load_conf(dirpath, args):
                             conf[key] = _smart_merge(conf[key], parser.items(section))
                             #print "ADD SECTION "+section
                             #print parser.items(section)
+                if type == 'user':
+                    if value.lower() == os.environ['USER'].lower():
+                        conf[key] = _smart_merge(conf[key], parser.items(section))
+                        #print "ADD SECTION "+section
+                        #print parser.items(section)
                 else:
                     raise ValueError('Invalid configuration section "{0}" in "{1}"'.format(type, section))
     # Expand certain data types for pre and post conf items

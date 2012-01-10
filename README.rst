@@ -75,19 +75,23 @@ post
 
 |
 
-Except for **prep**, you can also create mode- and host-specific variants of
-each directive, which will override the common config options with the
-conditional one you have provided::
+Except for **prep**, you can also create mode- and host- and user-specific
+variants of each directive, which will override the common config options
+with the conditional one you have provided::
 
     [vars]
     var1 = val1
     var2 = val2
+    var3 = val3
 
     [vars:mode=dev]
     var1 = dev-val1
 
     [vars:host=www]
     var2 = www-val2
+
+    [vars:user=root]
+    var3 = root-val3
 
 Please see sample/ directory for a set of working examples.
 
