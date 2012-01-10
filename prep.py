@@ -5,7 +5,7 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 import os, re, sys, time, socket
 import subprocess
@@ -57,14 +57,18 @@ def _do_prep(dirpath, conf):
     # Load our template handler
     template = None
     if conf['prep']['template'].lower() == 'simple':
-        template = SimpleTemplate(conf['vars'])
+        template = SimpleTemplate(conf)
     else:
         raise ValueError('Missing or unknown template type specified in {0} or via --template=TEMPLATE'.format(_conf_file))
     # Process the pre-prep tasks
-    _do_pre_post('pre', conf['pre'], template)
+    _do_pre_post('pre', conf, template)
     # Process files
     for pair in conf['files']:
         (src, dest) = pair
+        # Parse variables in the names
+        src  = template.render(src)
+        dest = template.render(dest)
+        # Make sure the file exists
         if not os.path.isfile(src):
             raise ValueError('No such file:  {0}'.format(src))
         print "{0} -> {1}".format(src, dest)
@@ -77,30 +81,43 @@ def _do_prep(dirpath, conf):
         # Write out the rendered file
         open(dest, 'w').write(data)
     # Process the post-prep tasks
-    _do_pre_post('post', conf['post'], template)
+    _do_pre_post('post', conf, template)
 
-def _do_pre_post(which, items, template=None):
+def _do_pre_post(which, conf, template=None):
     """
     Currently only supports the "run" command family.
     @todo more macros: chmod, mkdir, create-file, ???
     """
-    for item in items:
+    for item in conf[which]:
         (k, v) = item
-        if k == 'run' or k.startswith('run.'):
-            _run_commands(v, template)
+        if k == 'run' or k.startswith('run.') or k.startswith('set.'):
+            _run_commands(k, v, conf, template)
         else:
             raise ValueError('Unrecognized "{0}" command "{1}"'.format(which, k))
 
-def _run_commands(commands, template=None):
+def _run_commands(name, commands, conf, template=None):
     """Run one or more shell commands"""
+    # Set a config value to the result?
+    setvar = None
+    if name.startswith('set.'):
+        setvar = name[4:]
+        commands = [commands]
+    # Cleanup
     if isinstance(commands, str):
         commands = [commands]
+    # Go
     for task in commands:
+        if not task:
+            continue
         if isinstance(task, str):
             task = [task]
         if template:
             task = map(lambda x: template.render(x), task)
-        subprocess.call(task)
+        if setvar:
+            ret = subprocess.check_output(task)
+            conf['vars'] = _smart_merge(conf['vars'], [(setvar, ret.strip())])
+        else:
+            subprocess.call(task)
 
 def _smart_merge(thelist, new):
     """
@@ -197,12 +214,19 @@ def _load_conf(dirpath, args):
 # Template handlers
 
 class Template(object):
-    def __init__(self, vars):
+    def __init__(self, conf):
+        """
+        Note:  We pass in the full conf here because pre/post process can alter
+               conf['vars'], so we want to make sure we get those updates.
+        """
         self._cache = {}
-        if isinstance(vars, dict):
-            self.vars = vars
+        self.conf   = conf
+    @property
+    def vars(self):
+        if isinstance(self.conf['vars'], dict):
+            return self.conf['vars']
         else:
-            self.vars = dict(vars)
+            return dict(self.conf['vars'])
     def render_file(self, file, stack=None):
         raise NotImplementedError('Override this method in template child classes.')
     def render(self, data, file=None, stack=None):
@@ -287,3 +311,6 @@ def _arg_is_dir(path):
 
 if __name__ == '__main__':
     prep()
+
+# vim:ts=4:sw=4:ai:et:si:sts=4
+
