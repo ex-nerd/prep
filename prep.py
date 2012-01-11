@@ -5,11 +5,12 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.8'
+__version__ = '0.1.10'
 
 import os, re, sys, time, socket
 import subprocess
 import ConfigParser
+import argparse
 
 try:
     from collections import OrderedDict
@@ -20,8 +21,6 @@ _conf_file = 'prep.cfg'
 _conf_sections = ['prep', 'pre', 'post', 'files', 'vars']
 
 def prep():
-    # Lazy import so setup.py can load the version directly from this module
-    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--mode', nargs='?', help='Preparation mode (can also specify as --MODE)')
     parser.add_argument('-H', '--host', default=socket.gethostname(), nargs='?', help='Hostname to prepare for')
