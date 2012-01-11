@@ -5,7 +5,7 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 
 import os, re, sys, time, socket
 import subprocess
@@ -113,13 +113,14 @@ def _run_commands(name, commands, conf, template=None):
             task = [task]
         if template:
             task = map(lambda x: template.render(x), task)
+        use_shell = len(task) == 1
         if setvar:
-            ret = subprocess.Popen(task, stdout=subprocess.PIPE).communicate()[0]
+            ret = subprocess.Popen(task, stdout=subprocess.PIPE, shell=use_shell).communicate()[0]
             # Only in 2.7:
             # ret = subprocess.check_output(task)
             conf['vars'] = _smart_merge(conf['vars'], [(setvar, ret.strip())])
         else:
-            subprocess.call(task)
+            subprocess.call(task, shell=use_shell)
 
 def _smart_merge(thelist, new):
     """
