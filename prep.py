@@ -5,11 +5,16 @@ prep
 Main callable module
 """
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 import os, re, sys, time, socket
 import subprocess
 import ConfigParser
+
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 _conf_file = 'prep.cfg'
 _conf_sections = ['prep', 'pre', 'post', 'files', 'vars']
@@ -63,8 +68,7 @@ def _do_prep(dirpath, conf):
     # Process the pre-prep tasks
     _do_pre_post('pre', conf, template)
     # Process files
-    for pair in conf['files']:
-        (src, dest) = pair
+    for src, dest in conf['files'].items():
         # Parse variables in the names
         src  = template.render(src)
         dest = template.render(dest)
@@ -88,8 +92,7 @@ def _do_pre_post(which, conf, template=None):
     Currently only supports the "run" command family.
     @todo more macros: chmod, mkdir, create-file, ???
     """
-    for item in conf[which]:
-        (k, v) = item
+    for k, v in conf[which].items():
         if k == 'run' or k.startswith('run.') or k.startswith('set.'):
             _run_commands(k, v, conf, template)
         else:
@@ -130,30 +133,23 @@ def _smart_merge(thelist, new):
     """
     if not new:
         return thelist
-    # Take note of the placement of the sub-keys in the original list
-    keyloc = {}
-    for i, item in enumerate(thelist):
-        keyloc[item[0]] = i
     # Then scan through the new list, adding or replacing as necessary
-    for item in new:
-        if item[0] in keyloc:
-            #print "REPLACE {0} with {1}".format(thelist[keyloc[item[0]]], item)
-            thelist[keyloc[item[0]]] = item
-        else:
-            #print "ADD {0}".format(item)
-            thelist.append(item)
+    if not isinstance(new, list):
+        new = OrderedDict(new).items()
+    for k, v in new:
+        thelist[k] = v
     return thelist
 
 def _load_conf(dirpath, args):
-    parser = ConfigParser.SafeConfigParser()
+    parser = ConfigParser.SafeConfigParser(dict_type = OrderedDict)
     parser.read(os.path.join(dirpath, _conf_file))
-    conf = {}
+    conf = OrderedDict()
     for key in _conf_sections:
         try:
-            conf[key] = parser.items(key)
+            conf[key] = OrderedDict(parser.items(key))
         except ConfigParser.NoSectionError:
-            conf[key] = []
-    #print conf
+            conf[key] = OrderedDict()
+    # print repr(conf)
     # Parse conditional subsections
     for section in filter(lambda x: ':' in x, parser.sections()):
         for key in _conf_sections:
@@ -186,13 +182,13 @@ def _load_conf(dirpath, args):
                     raise ValueError('Invalid configuration section "{0}" in "{1}"'.format(type, section))
     # Expand certain data types for pre and post conf items
     for key in ('pre', 'post'):
-        for i, item in enumerate(conf[key]):
-            if item[1]:
-                val = item[1]
-                if val[0] in ('"', "'", '(', '[', '{'):
-                    conf[key][i] = (item[0], eval(val))
-                elif val.title() in ('True', 'False', 'None'):
-                    conf[key][i] = (item[0], eval(val.title()))
+        for k, v in conf[key].items():
+            if not v:
+                continue
+            if v[0] in ('"', "'", '(', '[', '{'):
+                conf[key][k] = eval(v)
+            elif val.title() in ('True', 'False', 'None'):
+                conf[key][k] = eval(v.title())
     # Override app-config vars with CLI argument values
     conf['prep'] = _smart_merge(
         conf['prep'],
@@ -208,8 +204,6 @@ def _load_conf(dirpath, args):
             ('time', str(int(time.time()))),
         ]
         )
-    # The app-config section should be a dict
-    conf['prep'] = dict(conf['prep'])
     # Return
     return conf
 

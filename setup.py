@@ -4,7 +4,7 @@ import sys
 import prep
 
 if sys.version_info < (2, 7):
-    install_requires = ['argparse']
+    install_requires = ['argparse', 'ordereddict']
 else:
     install_requires = []
 
